@@ -1,0 +1,21 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    background-color: #0a0f1e;
+    color: #f1f5f9;
+  }
+
+  body {
+    @apply font-sans antialiased;
+    min-height: 100vh;
+  }
+}
+
+@layer components {
+  .table-row-hover {
+    @apply transition-colors duration-100 hover:bg-white/5;
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install:*)",
+      "Bash(node server.js)",
+      "Bash(curl -s http://localhost:3001/api/health)",
+      "Bash(curl -s \"http://localhost:3001/api/sports/mlb/standings\")",
+      "Bash(node -e \"const d=require\\('fs'\\).readFileSync\\('/dev/stdin','utf8'\\); const j=JSON.parse\\(d\\); console.log\\('Teams:', j.standings.length\\); console.log\\('Top 5:', j.standings.slice\\(0,5\\).map\\(t => t.name + ' ' + t.wins + 'W'\\).join\\(', '\\)\\)\")",
+      "Bash(node -e \"const j=require\\('./standings_tmp.json'\\); console.log\\('Teams:', j.standings.length\\); console.log\\('Top 5:', j.standings.slice\\(0,5\\).map\\(t => t.name + ' ' + t.wins + 'W-' + t.losses + 'L'\\).join\\(', '\\)\\)\")",
+      "Bash(del standings_tmp.json)",
+      "Bash(taskkill /F /IM node.exe /T)",
+      "Bash(npm run:*)"
+    ]
+  }
+}
