@@ -1,0 +1,22 @@
+services:
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    expose:
+      - "3001"
+    volumes:
+      - sqlite_data:/app/data
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+
+  frontend:
+    build: ./frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
+volumes:
+  sqlite_data:

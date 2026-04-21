@@ -1,7 +1,9 @@
 {
   "name": "dub-hub-backend",
   "version": "1.0.0",
-  "engines": { "node": ">=18" },
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
     "dev": "node --watch server.js",
     "start": "node server.js"
@@ -9,6 +11,7 @@
   "dependencies": {
     "better-sqlite3": "^9.4.3",
     "cors": "^2.8.5",
+    "dub-hub": "file:..",
     "express": "^4.19.2"
   }
 }

@@ -30,9 +30,10 @@ Supported leagues: **MLB** (live) · NFL, NBA, NHL (planned)
 - **Database**: SQLite via `better-sqlite3` (file at `backend/data/dubhub.sqlite`)
 - **MLB Data**: MLB Stats API (free, no key required)
 - **Auth**: Not yet implemented — no login required currently
+- **Containerization**: Docker (production-style; multi-stage frontend build)
 - **Hosting**: TBD
 
-## Running Locally
+## Running Locally (dev mode)
 
 ```bash
 npm run dev          # from project root — starts both servers via concurrently
@@ -42,6 +43,40 @@ npm run dev          # from project root — starts both servers via concurrentl
 - Frontend: `http://localhost:5173`
 
 The Vite dev server proxies all `/api/*` requests to the backend, so the frontend always uses relative URLs.
+
+## Running with Docker (production mode)
+
+```bash
+docker compose up --build   # build and start both containers
+docker compose up           # start without rebuilding
+docker compose down         # stop containers
+```
+
+- App available at `http://localhost` (port 80)
+- Traffic flow: browser → nginx (port 80) → `/api/*` proxied to backend:3001; all other routes served as SPA
+
+### Docker architecture
+
+- **Frontend container**: multi-stage build — Node 18 runs `vite build`, nginx Alpine serves the `dist/` output; nginx config handles SPA routing (`try_files`) and proxies `/api/*` to the backend service
+- **Backend container**: Node 18 Alpine with `python3 make g++` for `better-sqlite3` native compilation; runs `node server.js`
+- **SQLite persistence**: named Docker volume `sqlite_data` mounted to `/app/data` in the backend container — data survives container restarts and rebuilds
+- **Dependency installs**: both containers use `npm ci` with committed lockfiles (`backend/package-lock.json`, `frontend/package-lock.json`) for reproducible builds
+
+### Docker files
+
+```
+/
+├── docker-compose.yml         # wires frontend + backend services; defines sqlite_data volume
+├── backend/
+│   ├── Dockerfile
+│   ├── .dockerignore          # excludes node_modules, data/, *.sqlite, .env
+│   └── package-lock.json
+└── frontend/
+    ├── Dockerfile
+    ├── nginx.conf             # SPA routing + /api/* proxy to backend:3001
+    ├── .dockerignore          # excludes node_modules, dist/, .env
+    └── package-lock.json
+```
 
 ## Sports Data APIs
 
@@ -101,11 +136,15 @@ win_cache
 /
 ├── CLAUDE.md
 ├── package.json               # root — runs both servers via concurrently
+├── docker-compose.yml         # production Docker setup
 ├── backend/
+│   ├── Dockerfile
+│   ├── .dockerignore
 │   ├── package.json
+│   ├── package-lock.json
 │   ├── server.js              # Express entry point; initializes DB on startup
 │   ├── data/
-│   │   └── dubhub.sqlite      # SQLite DB file (gitignored)
+│   │   └── dubhub.sqlite      # SQLite DB file (gitignored; persisted via Docker volume)
 │   ├── db/
 │   │   ├── index.js           # DB connection (WAL mode, foreign keys on)
 │   │   ├── schema.js          # CREATE TABLE IF NOT EXISTS statements
@@ -117,8 +156,12 @@ win_cache
 │       ├── standings.js       # GET /api/sports/:sport/standings|teams
 │       └── pools.js           # Full pool CRUD, members, team assignments
 └── frontend/
+    ├── Dockerfile
+    ├── .dockerignore
+    ├── nginx.conf             # SPA routing + /api/* proxy to backend:3001
     ├── package.json
-    ├── vite.config.js         # proxies /api/* to localhost:3001
+    ├── package-lock.json
+    ├── vite.config.js         # proxies /api/* to localhost:3001 (dev only)
     ├── tailwind.config.js
     ├── index.html
     └── src/
