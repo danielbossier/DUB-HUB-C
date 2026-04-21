@@ -15,18 +15,18 @@ function TeamLogo({ bg, logoUrl, abbreviation }) {
   const [imgError, setImgError] = useState(false);
   return (
     <span
-      className="inline-flex items-center justify-center w-8 h-8 rounded shrink-0"
-      style={{ backgroundColor: bg }}
+      className="inline-flex items-center justify-center w-8 h-8 rounded shrink-0 bg-white border-2"
+      style={{ borderColor: bg }}
     >
       {logoUrl && !imgError ? (
         <img
           src={logoUrl}
           alt={abbreviation}
-          className="w-7 h-7 object-contain"
+          className="w-6 h-6 object-contain"
           onError={() => setImgError(true)}
         />
       ) : (
-        <span className="text-xs font-bold text-white">{abbreviation}</span>
+        <span className="text-xs font-bold" style={{ color: bg }}>{abbreviation}</span>
       )}
     </span>
   );
@@ -41,18 +41,18 @@ function TeamChip({ team, sport }) {
   return (
     <div className="flex items-center gap-1.5 bg-surface-700 rounded-md px-2 py-1 border border-white/5">
       <span
-        className="inline-flex items-center justify-center w-6 h-6 rounded shrink-0"
-        style={{ backgroundColor: bg }}
+        className="inline-flex items-center justify-center w-6 h-6 rounded shrink-0 bg-white border-2"
+        style={{ borderColor: bg }}
       >
         {logoUrl && !imgError ? (
           <img
             src={logoUrl}
             alt={team.abbreviation}
-            className="w-5 h-5 object-contain"
+            className="w-4 h-4 object-contain"
             onError={() => setImgError(true)}
           />
         ) : (
-          <span className="text-xs font-bold text-white">{team.abbreviation}</span>
+          <span className="text-xs font-bold" style={{ color: bg }}>{team.abbreviation}</span>
         )}
       </span>
       <span className="text-xs text-slate-300 font-medium">{label}</span>

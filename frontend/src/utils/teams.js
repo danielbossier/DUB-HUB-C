@@ -50,9 +50,12 @@ export function getLogoUrl(sport, externalId) {
       return `https://a.espncdn.com/i/teamlogos/nfl/500/${externalId}.png`;
     case 'nba':
       return `https://a.espncdn.com/i/teamlogos/nba/500/${externalId}.png`;
-    case 'nhl':
-      // NHL external_id is the team abbreviation (e.g. "BOS")
-      return `https://a.espncdn.com/i/teamlogos/nhl/500/${String(externalId).toLowerCase()}.png`;
+    case 'nhl': {
+      // ESPN uses shorter abbreviations for some NHL teams
+      const NHL_ESPN_ABBR = { TBL: 'tb', SJS: 'sj', LAK: 'la', NJD: 'nj' };
+      const abbr = NHL_ESPN_ABBR[String(externalId).toUpperCase()] ?? String(externalId).toLowerCase();
+      return `https://a.espncdn.com/i/teamlogos/nhl/500/${abbr}.png`;
+    }
     default:
       return null;
   }

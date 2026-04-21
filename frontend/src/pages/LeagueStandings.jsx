@@ -10,18 +10,18 @@ function TeamBadge({ abbreviation, externalId, sport }) {
 
   return (
     <span
-      className="inline-flex items-center justify-center w-10 h-10 rounded-lg shrink-0"
-      style={{ backgroundColor: bg }}
+      className="inline-flex items-center justify-center w-10 h-10 rounded-lg shrink-0 bg-white border-2"
+      style={{ borderColor: bg }}
     >
       {logoUrl && !imgError ? (
         <img
           src={logoUrl}
           alt={abbreviation}
-          className="w-8 h-8 object-contain p-0.5"
+          className="w-7 h-7 object-contain"
           onError={() => setImgError(true)}
         />
       ) : (
-        <span className="text-xs font-bold text-white">{abbreviation}</span>
+        <span className="text-xs font-bold" style={{ color: bg }}>{abbreviation}</span>
       )}
     </span>
   );
