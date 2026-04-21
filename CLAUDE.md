@@ -22,6 +22,7 @@ Supported leagues: **MLB, NFL, NBA, NHL** (all live)
 3. **Pool Leaderboard** — Participants ranked by total wins; each row is expandable to show individual team win/loss breakdown
 4. **League Standings View** — All teams for the selected sport ranked by wins; shows an Owner column when a pool is selected; unassigned teams show "—" in the Owner column
 5. **Win Cache** — Win totals fetched from each sport's API and cached in SQLite for 15 minutes; stale cache is refreshed automatically on the next request
+6. **Team Logos & Colors** — Each team badge/chip shows the team logo on a white background with a colored border (team color); falls back to abbreviation text in team color if logo fails to load
 
 ## Tech Stack
 
@@ -104,6 +105,7 @@ Each league has its own service module. All fetching goes through `backend/servi
 - Standings: `GET /standings/{YYYY-MM-DD}` — uses April 15 of season year to capture end-of-regular-season
 - `external_id` matches `teamAbbrev.default` (e.g. `"BOS"`, `"TOR"`)
 - OTL (overtime losses) are counted as losses in the win/loss record
+- Scoring uses NHL points (wins×2 + OTL×1) stored in the `points` column of `win_cache`
 
 > Note: ESPN's unofficial API endpoints may change without notice. If they become unreliable, consider the SportsDB API (`https://www.thesportsdb.com/api.php`) as a fallback — free tier with an API key.
 
