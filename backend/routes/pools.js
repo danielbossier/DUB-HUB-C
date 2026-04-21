@@ -53,22 +53,24 @@ router.get('/:id', async (req, res) => {
 
     const leaderboard = members.map((member) => {
       const teams = db.prepare(`
-        SELECT t.id, t.name, t.abbreviation, t.city,
+        SELECT t.id, t.name, t.abbreviation, t.city, t.external_id,
                COALESCE(wc.wins,   0) AS wins,
-               COALESCE(wc.losses, 0) AS losses
+               COALESCE(wc.losses, 0) AS losses,
+               wc.points,
+               COALESCE(wc.points, wc.wins, 0) AS score
         FROM team_assignments ta
         JOIN teams t ON t.id = ta.team_id
         LEFT JOIN win_cache wc ON wc.team_id = t.id AND wc.season_year = ?
         WHERE ta.pool_id = ? AND ta.member_id = ?
-        ORDER BY wins DESC
+        ORDER BY score DESC
       `).all(pool.season_year, pool.id, member.id);
 
-      const totalWins = teams.reduce((sum, t) => sum + t.wins, 0);
-      return { ...member, totalWins, teams };
+      const totalScore = teams.reduce((sum, t) => sum + t.score, 0);
+      return { ...member, totalScore, teams };
     });
 
     // Sort by totalWins descending
-    leaderboard.sort((a, b) => b.totalWins - a.totalWins);
+    leaderboard.sort((a, b) => b.totalScore - a.totalScore);
 
     res.json({ pool, leaderboard });
   } catch (err) {

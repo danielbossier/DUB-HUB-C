@@ -1,15 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { fetchPool, deletePool } from '../services/api';
-
-const TEAM_COLORS = {
-  BAL: '#DF4601', BOS: '#BD3039', NYY: '#003087', TB: '#092C5C', TOR: '#134A8E',
-  CWS: '#27251F', CLE: '#00385D', DET: '#0C2340', KC: '#004687', MIN: '#002B5C',
-  HOU: '#002D62', LAA: '#003263', ATH: '#003831', SEA: '#0C2C56', TEX: '#003278',
-  ATL: '#CE1141', MIA: '#00A3E0', NYM: '#002D72', PHI: '#E81828', WSH: '#AB0003',
-  CHC: '#0E3386', CIN: '#C6011F', MIL: '#12284B', PIT: '#FDB827', STL: '#C41E3A',
-  ARI: '#A71930', COL: '#333366', LAD: '#005A9C', SD: '#2F241D', SF: '#FD5A1E',
-};
+import { getTeamColor, getLogoUrl } from '../utils/teams';
 
 const RANK_STYLES = [
   'text-yellow-400',  // 1st
@@ -17,17 +9,53 @@ const RANK_STYLES = [
   'text-amber-600',   // 3rd
 ];
 
-function TeamChip({ team }) {
-  const bg = TEAM_COLORS[team.abbreviation] ?? '#334155';
+const usesPoints = (sport) => sport === 'nhl';
+
+function TeamLogo({ bg, logoUrl, abbreviation }) {
+  const [imgError, setImgError] = useState(false);
+  return (
+    <span
+      className="inline-flex items-center justify-center w-8 h-8 rounded shrink-0"
+      style={{ backgroundColor: bg }}
+    >
+      {logoUrl && !imgError ? (
+        <img
+          src={logoUrl}
+          alt={abbreviation}
+          className="w-7 h-7 object-contain"
+          onError={() => setImgError(true)}
+        />
+      ) : (
+        <span className="text-xs font-bold text-white">{abbreviation}</span>
+      )}
+    </span>
+  );
+}
+
+function TeamChip({ team, sport }) {
+  const [imgError, setImgError] = useState(false);
+  const bg = getTeamColor(sport, team.abbreviation);
+  const logoUrl = getLogoUrl(sport, team.external_id);
+  const label = usesPoints(sport) ? `${team.score}PTS` : `${team.wins}W`;
+
   return (
     <div className="flex items-center gap-1.5 bg-surface-700 rounded-md px-2 py-1 border border-white/5">
       <span
-        className="inline-flex items-center justify-center w-6 h-6 rounded text-xs font-bold text-white shrink-0"
+        className="inline-flex items-center justify-center w-6 h-6 rounded shrink-0"
         style={{ backgroundColor: bg }}
       >
-        {team.abbreviation}
+        {logoUrl && !imgError ? (
+          <img
+            src={logoUrl}
+            alt={team.abbreviation}
+            className="w-5 h-5 object-contain"
+            onError={() => setImgError(true)}
+          />
+        ) : (
+          <span className="text-xs font-bold text-white">{team.abbreviation}</span>
+        )}
       </span>
-      <span className="text-xs text-slate-300 font-medium">{team.wins}W</span>
+      <span className="text-xs text-slate-300 font-medium">{label}</span>
     </div>
   );
 }
@@ -148,17 +176,19 @@ export default function PoolLeaderboard({ sport }) {
                   {!isExpanded && (
                     <div className="hidden sm:flex items-center gap-1.5 flex-wrap">
                       {member.teams.map((t) => (
-                        <TeamChip key={t.id} team={t} />
+                        <TeamChip key={t.id} team={t} sport={sport} />
                       ))}
                     </div>
                   )}
 
-                  {/* Total wins */}
+                  {/* Total score */}
                   <div className="text-right shrink-0 ml-2">
                     <div className="text-2xl font-extrabold text-green-400 leading-none">
-                      {member.totalWins}
+                      {member.totalScore}
                     </div>
-                    <div className="text-xs text-slate-500 mt-0.5">wins</div>
+                    <div className="text-xs text-slate-500 mt-0.5">
+                      {usesPoints(sport) ? 'pts' : 'wins'}
+                    </div>
                   </div>
 
                   {/* Expand indicator */}
@@ -174,27 +204,25 @@ export default function PoolLeaderboard({ sport }) {
                       <thead>
                         <tr className="text-xs text-slate-500 uppercase tracking-wider">
                           <th className="text-left pb-2">Team</th>
-                          <th className="text-right pb-2 w-16">W</th>
+                          <th className="text-right pb-2 w-16">{usesPoints(sport) ? 'PTS' : 'W'}</th>
                           <th className="text-right pb-2 w-16">L</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-white/5">
                         {member.teams.map((team) => {
-                          const bg = TEAM_COLORS[team.abbreviation] ?? '#334155';
+                          const bg = getTeamColor(sport, team.abbreviation);
+                          const logoUrl = getLogoUrl(sport, team.external_id);
                           return (
                             <tr key={team.id}>
                               <td className="py-2">
                                 <div className="flex items-center gap-2">
-                                  <span
-                                    className="inline-flex items-center justify-center w-8 h-8 rounded text-xs font-bold text-white shrink-0"
-                                    style={{ backgroundColor: bg }}
-                                  >
-                                    {team.abbreviation}
-                                  </span>
+                                  <TeamLogo bg={bg} logoUrl={logoUrl} abbreviation={team.abbreviation} />
                                   <span className="text-slate-200">{team.name}</span>
                                 </div>
                               </td>
-                              <td className="py-2 text-right font-semibold text-green-400">{team.wins}</td>
+                              <td className="py-2 text-right font-semibold text-green-400">
+                                {usesPoints(sport) ? team.score : team.wins}
+                              </td>
                               <td className="py-2 text-right text-slate-400">{team.losses}</td>
                             </tr>
                           );
@@ -203,7 +231,7 @@ export default function PoolLeaderboard({ sport }) {
                       <tfoot>
                         <tr className="border-t border-white/10">
                           <td className="pt-2 text-xs text-slate-500 font-semibold uppercase tracking-wider">Total</td>
-                          <td className="pt-2 text-right font-extrabold text-green-400">{member.totalWins}</td>
+                          <td className="pt-2 text-right font-extrabold text-green-400">{member.totalScore}</td>
                           <td className="pt-2 text-right text-slate-400">
                             {member.teams.reduce((s, t) => s + t.losses, 0)}
                           </td>

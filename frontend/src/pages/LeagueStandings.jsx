@@ -1,24 +1,28 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { fetchStandings, fetchPools, fetchPool } from '../services/api';
+import { getTeamColor, getLogoUrl } from '../utils/teams';
 
-const TEAM_COLORS = {
-  BAL: '#DF4601', BOS: '#BD3039', NYY: '#003087', TB: '#092C5C', TOR: '#134A8E',
-  CWS: '#27251F', CLE: '#00385D', DET: '#0C2340', KC: '#004687', MIN: '#002B5C',
-  HOU: '#002D62', LAA: '#003263', ATH: '#003831', SEA: '#0C2C56', TEX: '#003278',
-  ATL: '#CE1141', MIA: '#00A3E0', NYM: '#002D72', PHI: '#E81828', WSH: '#AB0003',
-  CHC: '#0E3386', CIN: '#C6011F', MIL: '#12284B', PIT: '#FDB827', STL: '#C41E3A',
-  ARI: '#A71930', COL: '#333366', LAD: '#005A9C', SD: '#2F241D', SF: '#FD5A1E',
-};
+function TeamBadge({ abbreviation, externalId, sport }) {
+  const [imgError, setImgError] = useState(false);
+  const bg = getTeamColor(sport, abbreviation);
+  const logoUrl = getLogoUrl(sport, externalId);
 
-function TeamBadge({ abbreviation }) {
-  const bg = TEAM_COLORS[abbreviation] ?? '#334155';
   return (
     <span
-      className="inline-flex items-center justify-center w-10 h-10 rounded-lg text-xs font-bold text-white shrink-0"
+      className="inline-flex items-center justify-center w-10 h-10 rounded-lg shrink-0"
       style={{ backgroundColor: bg }}
     >
-      {abbreviation}
+      {logoUrl && !imgError ? (
+        <img
+          src={logoUrl}
+          alt={abbreviation}
+          className="w-8 h-8 object-contain p-0.5"
+          onError={() => setImgError(true)}
+        />
+      ) : (
+        <span className="text-xs font-bold text-white">{abbreviation}</span>
+      )}
     </span>
   );
 }
@@ -28,6 +32,8 @@ function pct(wins, losses) {
   if (total === 0) return '.000';
   return (wins / total).toFixed(3).replace(/^0/, '');
 }
+
+const usesPoints = (sport) => sport === 'nhl';
 
 export default function LeagueStandings({ sport }) {
   const [standings, setStandings] = useState([]);
@@ -137,9 +143,9 @@ export default function LeagueStandings({ sport }) {
             <tr className="bg-surface-700 text-slate-400 text-xs uppercase tracking-wider">
               <th className="text-left px-4 py-3 w-10">#</th>
               <th className="text-left px-4 py-3">Team</th>
-              <th className="text-right px-4 py-3 w-14">W</th>
+              <th className="text-right px-4 py-3 w-14">{usesPoints(sport) ? 'PTS' : 'W'}</th>
               <th className="text-right px-4 py-3 w-14">L</th>
-              <th className="text-right px-4 py-3 w-16">PCT</th>
+              {!usesPoints(sport) && <th className="text-right px-4 py-3 w-16">PCT</th>}
               {hasOwners && <th className="text-left px-4 py-3 w-32">Owner</th>}
             </tr>
           </thead>
@@ -151,18 +157,22 @@ export default function LeagueStandings({ sport }) {
                   <td className="px-4 py-3 text-slate-500 font-mono text-xs">{idx + 1}</td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
-                      <TeamBadge abbreviation={team.abbreviation} />
+                      <TeamBadge abbreviation={team.abbreviation} externalId={team.external_id} sport={sport} />
                       <div>
                         <div className="font-medium text-slate-100">{team.name}</div>
                         <div className="text-xs text-slate-500">{team.division}</div>
                       </div>
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-right font-semibold text-green-400">{team.wins}</td>
-                  <td className="px-4 py-3 text-right text-slate-400">{team.losses}</td>
-                  <td className="px-4 py-3 text-right text-slate-300 font-mono text-xs">
-                    {pct(team.wins, team.losses)}
+                  <td className="px-4 py-3 text-right font-semibold text-green-400">
+                    {usesPoints(sport) ? (team.points ?? 0) : team.wins}
                   </td>
+                  <td className="px-4 py-3 text-right text-slate-400">{team.losses}</td>
+                  {!usesPoints(sport) && (
+                    <td className="px-4 py-3 text-right text-slate-300 font-mono text-xs">
+                      {pct(team.wins, team.losses)}
+                    </td>
+                  )}
                   {hasOwners && (
                     <td className="px-4 py-3">
                       {owner ? (

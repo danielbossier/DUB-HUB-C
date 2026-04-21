@@ -23,10 +23,14 @@ async function fetchStandings(seasonYear) {
   const records = [];
 
   for (const team of data.standings ?? []) {
+    const wins = team.wins ?? 0;
+    const otLosses = team.otLosses ?? 0;
+    const losses = (team.losses ?? 0) + otLosses;
     records.push({
       externalId: team.teamAbbrev?.default ?? '',
-      wins: team.wins ?? 0,
-      losses: (team.losses ?? 0) + (team.otLosses ?? 0),
+      wins,
+      losses,
+      points: wins * 2 + otLosses,
     });
   }
 

@@ -15,17 +15,15 @@ async function fetchStandings(seasonYear) {
   const data = await response.json();
   const records = [];
 
-  // Structure: data.children (conferences) → children (divisions) → standings.entries (teams)
+  // Structure: data.children (conferences) → standings.entries (teams)
   for (const conference of data.children ?? []) {
-    for (const division of conference.children ?? []) {
-      for (const entry of division.standings?.entries ?? []) {
-        const stat = (name) => entry.stats?.find((s) => s.name === name)?.value ?? 0;
-        records.push({
-          externalId: String(entry.team.id),
-          wins: stat('wins'),
-          losses: stat('losses'),
-        });
-      }
+    for (const entry of conference.standings?.entries ?? []) {
+      const stat = (name) => entry.stats?.find((s) => s.name === name)?.value ?? 0;
+      records.push({
+        externalId: String(entry.team.id),
+        wins: stat('wins'),
+        losses: stat('losses'),
+      });
     }
   }
 

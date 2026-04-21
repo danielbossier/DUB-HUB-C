@@ -45,10 +45,18 @@ function initSchema(db) {
       season_year INTEGER NOT NULL,
       wins        INTEGER NOT NULL DEFAULT 0,
       losses      INTEGER NOT NULL DEFAULT 0,
+      points      INTEGER,
       last_updated TEXT   NOT NULL,
       PRIMARY KEY (team_id, season_year)
     );
   `);
+
+  // Migration: add points column to existing DBs
+  try {
+    db.exec('ALTER TABLE win_cache ADD COLUMN points INTEGER');
+  } catch (_) {
+    // Column already exists
+  }
 }
 
 module.exports = { initSchema };

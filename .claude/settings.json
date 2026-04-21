@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(taskkill /F /IM node.exe)"
+      "Bash(taskkill /F /IM node.exe)",
+      "WebFetch(domain:site.api.espn.com)"
     ]
   }
 }

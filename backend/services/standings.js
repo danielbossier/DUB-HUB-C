@@ -35,18 +35,19 @@ async function refreshIfStale(sport, seasonYear) {
 
   const getTeam = db.prepare('SELECT id FROM teams WHERE sport = ? AND external_id = ?');
   const upsert = db.prepare(`
-    INSERT INTO win_cache (team_id, season_year, wins, losses, last_updated)
-    VALUES (?, ?, ?, ?, datetime('now'))
+    INSERT INTO win_cache (team_id, season_year, wins, losses, points, last_updated)
+    VALUES (?, ?, ?, ?, ?, datetime('now'))
     ON CONFLICT(team_id, season_year) DO UPDATE SET
       wins         = excluded.wins,
       losses       = excluded.losses,
+      points       = excluded.points,
       last_updated = excluded.last_updated
   `);
 
   const upsertAll = db.transaction((recs) => {
     for (const rec of recs) {
       const team = getTeam.get(sport, rec.externalId);
-      if (team) upsert.run(team.id, seasonYear, rec.wins, rec.losses);
+      if (team) upsert.run(team.id, seasonYear, rec.wins, rec.losses, rec.points ?? null);
     }
   });
 
@@ -63,14 +64,15 @@ async function getStandings(sport, seasonYear) {
 
   return db.prepare(`
     SELECT
-      t.id, t.name, t.abbreviation, t.city, t.division, t.league,
+      t.id, t.name, t.abbreviation, t.city, t.division, t.league, t.external_id,
       COALESCE(wc.wins,   0) AS wins,
       COALESCE(wc.losses, 0) AS losses,
+      wc.points,
       wc.last_updated
     FROM teams t
     LEFT JOIN win_cache wc ON wc.team_id = t.id AND wc.season_year = ?
     WHERE t.sport = ?
-    ORDER BY wins DESC, losses ASC
+    ORDER BY COALESCE(wc.points, wc.wins, 0) DESC, losses ASC
   `).all(seasonYear, sport);
 }
 

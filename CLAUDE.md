@@ -4,7 +4,7 @@
 
 DUB HUB is a "Wins Pool" web app where users can track the total number of wins accumulated by a selected group of sports teams across a season. Users pick a set of teams at the start of a season and watch their cumulative win totals grow over time.
 
-Supported leagues: **MLB** (live) · NFL, NBA, NHL (planned)
+Supported leagues: **MLB, NFL, NBA, NHL** (all live)
 
 ## Core Concept
 
@@ -20,15 +20,15 @@ Supported leagues: **MLB** (live) · NFL, NBA, NHL (planned)
 1. **Pool Management** — Create a pool with a name, sport, season year, and teams-per-participant count
 2. **Team Assignment** — Assign N teams per participant from a two-column (AL / NL) team picker; teams already assigned to another participant are grayed out and unselectable
 3. **Pool Leaderboard** — Participants ranked by total wins; each row is expandable to show individual team win/loss breakdown
-4. **League Standings View** — All 30 MLB teams ranked by wins; shows an Owner column when a pool is selected; unassigned teams show "—" in the Owner column
-5. **Win Cache** — Win totals fetched from the MLB Stats API and cached in SQLite for 15 minutes; stale cache is refreshed automatically on the next request
+4. **League Standings View** — All teams for the selected sport ranked by wins; shows an Owner column when a pool is selected; unassigned teams show "—" in the Owner column
+5. **Win Cache** — Win totals fetched from each sport's API and cached in SQLite for 15 minutes; stale cache is refreshed automatically on the next request
 
 ## Tech Stack
 
 - **Frontend**: React 18 + Vite 5, React Router v6, Tailwind CSS v3
 - **Backend**: Node.js 18+ / Express 4
 - **Database**: SQLite via `better-sqlite3` (file at `backend/data/dubhub.sqlite`)
-- **MLB Data**: MLB Stats API (free, no key required)
+- **Sports Data**: MLB Stats API, ESPN public API (NFL/NBA), NHL Stats API (all free, no keys required)
 - **Auth**: Not yet implemented — no login required currently
 - **Containerization**: Docker (production-style; multi-stage frontend build)
 - **Hosting**: Fly.io
@@ -87,20 +87,23 @@ Each league has its own service module. All fetching goes through `backend/servi
 - Base URL: `https://statsapi.mlb.com/api/v1`
 - Standings: `GET /standings?leagueId=103,104&season={year}&standingsTypes=regularSeason`
 
-### NFL (planned)
+### NFL (implemented)
 - **API**: ESPN public API (unofficial, no key required)
-- Standings: `GET https://site.api.espn.com/apis/v2/sports/football/nfl/standings`
+- Standings: `GET https://site.api.espn.com/apis/v2/sports/football/nfl/standings?season={year}`
+- Response structure: `children` (conferences) → `children` (divisions) → `standings.entries` (teams)
 - Note: only 17 games per season — win totals will be much lower than other sports
 
-### NBA (planned)
-- **API**: ESPN public API
-- Standings: `GET https://site.api.espn.com/apis/v2/sports/basketball/nba/standings`
+### NBA (implemented)
+- **API**: ESPN public API (unofficial, no key required)
+- Standings: `GET https://site.api.espn.com/apis/v2/sports/basketball/nba/standings?season={year}`
+- Response structure: `children` (conferences) → `standings.entries` (teams) — one level shallower than NFL
 
-### NHL (planned)
+### NHL (implemented)
 - **API**: NHL Stats API (free, no key required)
 - Base URL: `https://api-web.nhle.com/v1`
-- Standings: `GET /standings/{YYYY-MM-DD}`
-- Open question: whether overtime losses (OTL) count as losses or partial wins for scoring
+- Standings: `GET /standings/{YYYY-MM-DD}` — uses April 15 of season year to capture end-of-regular-season
+- `external_id` matches `teamAbbrev.default` (e.g. `"BOS"`, `"TOR"`)
+- OTL (overtime losses) are counted as losses in the win/loss record
 
 > Note: ESPN's unofficial API endpoints may change without notice. If they become unreliable, consider the SportsDB API (`https://www.thesportsdb.com/api.php`) as a fallback — free tier with an API key.
 
@@ -148,9 +151,12 @@ win_cache
 │   ├── db/
 │   │   ├── index.js           # DB connection (WAL mode, foreign keys on)
 │   │   ├── schema.js          # CREATE TABLE IF NOT EXISTS statements
-│   │   └── seed.js            # 30 MLB teams seeded on first run
+│   │   └── seed.js            # MLB/NFL/NBA/NHL teams seeded per sport on first run
 │   ├── services/
 │   │   ├── mlb.js             # MLB Stats API fetcher
+│   │   ├── nfl.js             # ESPN NFL API fetcher
+│   │   ├── nba.js             # ESPN NBA API fetcher
+│   │   ├── nhl.js             # NHL Stats API fetcher
 │   │   └── standings.js       # Cache refresh logic + sport-agnostic getStandings()
 │   └── routes/
 │       ├── standings.js       # GET /api/sports/:sport/standings|teams
@@ -169,7 +175,7 @@ win_cache
         ├── App.jsx            # routing: /mlb, /mlb/pools/:id, /mlb/pools/new, etc.
         ├── index.css
         ├── components/
-        │   └── SportTabs.jsx  # MLB active; NFL/NBA/NHL shown as coming soon
+        │   └── SportTabs.jsx  # All four sport tabs active
         ├── pages/
         │   ├── LeagueStandings.jsx   # all teams ranked by wins; owner column with pool selected
         │   ├── PoolLeaderboard.jsx   # participants ranked by total wins; expandable rows
@@ -180,7 +186,8 @@ win_cache
 
 ## Development Guidelines
 
-- To add a new sport: (1) create `backend/services/{sport}.js` with a `fetchStandings(year)` function, (2) register it in the `fetchers` map in `standings.js`, (3) seed teams via `db/seed.js`, (4) enable the sport tab in `SportTabs.jsx`
+- All four sports (MLB, NFL, NBA, NHL) are fully implemented with live standings
+- To add a new sport: (1) create `backend/services/{sport}.js` with a `fetchStandings(year)` function returning `[{ externalId, wins, losses }]`, (2) register it in the `fetchers` map in `standings.js`, (3) add team data to `SEEDS` in `db/seed.js`, (4) add routes in `frontend/src/App.jsx`, (5) add a tab in `SportTabs.jsx`
 - Win totals are the single source of truth for scoring — never derive scores any other way
 - Season year and sport are stored per pool — never hardcode them
 - Cache TTL is 15 minutes (`CACHE_TTL_MS` in `services/standings.js`) — adjust if needed for game-day freshness
@@ -228,3 +235,5 @@ frontend/nginx.local.conf    # Local Docker nginx config (proxies to backend:300
 - Should a live snake draft mechanic be supported, or is manual admin assignment sufficient?
 - Should users be able to belong to multiple pools simultaneously?
 - What does the invite/share flow look like — shareable link, email, or username lookup?
+- NHL: OTL currently counts as a loss — should it be treated differently for scoring purposes?
+- NFL/NBA `external_id` values are based on ESPN's standard team IDs — verify against live API responses if team matching issues arise
