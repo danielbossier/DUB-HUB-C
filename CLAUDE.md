@@ -127,13 +127,14 @@ team_assignments
   UNIQUE(pool_id, team_id)         -- enforces exclusive ownership within a pool
 
 win_cache
-  team_id, season_year, wins, losses, last_updated
+  team_id, season_year, wins, losses, points INTEGER (nullable), last_updated
   PRIMARY KEY(team_id, season_year)
 ```
 
 - No `User` table yet — pool members are display names only, no login
-- Score = `SUM(win_cache.wins)` for a member's assigned teams in a pool
+- Score = `COALESCE(points, wins)` — NHL uses `points` (wins×2 + OTL×1); all other sports use `wins`
 - `sport` on `Pool` drives which API service is used; scoring logic is sport-agnostic above that layer
+- `points` column was added via `ALTER TABLE` migration in `schema.js` (try/catch for existing DBs)
 
 ## Project Structure
 
@@ -182,6 +183,8 @@ win_cache
         │   ├── LeagueStandings.jsx   # all teams ranked by wins; owner column with pool selected
         │   ├── PoolLeaderboard.jsx   # participants ranked by total wins; expandable rows
         │   └── PoolSetup.jsx         # create pool; add members; assign teams (AL/NL two-column picker)
+        ├── utils/
+        │   └── teams.js              # TEAM_COLORS + getTeamColor() + getLogoUrl() for all 4 sports
         └── services/
             └── api.js         # all fetch calls to the backend API
 ```
@@ -189,11 +192,22 @@ win_cache
 ## Development Guidelines
 
 - All four sports (MLB, NFL, NBA, NHL) are fully implemented with live standings
-- To add a new sport: (1) create `backend/services/{sport}.js` with a `fetchStandings(year)` function returning `[{ externalId, wins, losses }]`, (2) register it in the `fetchers` map in `standings.js`, (3) add team data to `SEEDS` in `db/seed.js`, (4) add routes in `frontend/src/App.jsx`, (5) add a tab in `SportTabs.jsx`
+- To add a new sport: (1) create `backend/services/{sport}.js` with a `fetchStandings(year)` function returning `[{ externalId, wins, losses }]`, (2) register it in the `fetchers` map in `standings.js`, (3) add team data to `SEEDS` in `db/seed.js`, (4) add routes in `frontend/src/App.jsx`, (5) add a tab in `SportTabs.jsx`, (6) add colors to `TEAM_COLORS` and logo URL logic to `getLogoUrl()` in `utils/teams.js`
 - Win totals are the single source of truth for scoring — never derive scores any other way
 - Season year and sport are stored per pool — never hardcode them
 - Cache TTL is 15 minutes (`CACHE_TTL_MS` in `services/standings.js`) — adjust if needed for game-day freshness
 - All data persists in `backend/data/dubhub.sqlite` across server restarts; only the win cache goes stale (auto-refreshes on next request)
+
+## Team Logo Implementation
+
+- Logo URLs are constructed in `frontend/src/utils/teams.js` via `getLogoUrl(sport, externalId)`
+- MLB: `https://www.mlbstatic.com/team-logos/{numericId}.svg` — `external_id` is the MLB Stats API numeric team ID
+- NFL: `https://a.espncdn.com/i/teamlogos/nfl/500/{espnId}.png` — `external_id` is the ESPN numeric team ID
+- NBA: `https://a.espncdn.com/i/teamlogos/nba/500/{espnId}.png` — `external_id` is the ESPN numeric team ID
+- NHL: `https://a.espncdn.com/i/teamlogos/nhl/500/{abbr}.png` — `external_id` is the NHL team abbreviation, but ESPN uses shorter abbreviations for some teams; a mapping handles the known differences:
+  - `TBL` → `tb`, `SJS` → `sj`, `LAK` → `la`, `NJD` → `nj`
+- All badge/chip components use a **white background with a colored border** (team color) so logos are visible regardless of how light or dark the team's colors are
+- `onError` fallback: shows the team abbreviation in team color text on white background
 
 ## Hosting (Fly.io)
 
@@ -237,5 +251,6 @@ frontend/nginx.local.conf    # Local Docker nginx config (proxies to backend:300
 - Should a live snake draft mechanic be supported, or is manual admin assignment sufficient?
 - Should users be able to belong to multiple pools simultaneously?
 - What does the invite/share flow look like — shareable link, email, or username lookup?
-- NHL: OTL currently counts as a loss — should it be treated differently for scoring purposes?
-- NFL/NBA `external_id` values are based on ESPN's standard team IDs — verify against live API responses if team matching issues arise
+- NHL: OTL currently counts as a loss in the W/L record display — should it be shown as a separate OTL column?
+- NFL/NBA `external_id` values are based on ESPN's standard numeric team IDs — if logo or standings matching breaks for a team, verify the ID against the live ESPN API response
+- Are there additional NHL teams whose ESPN CDN abbreviation differs from the NHL official abbreviation beyond the four already mapped (TBL, SJS, LAK, NJD)?
