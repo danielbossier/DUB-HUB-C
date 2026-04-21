@@ -2,9 +2,9 @@ import { NavLink } from 'react-router-dom';
 
 const SPORTS = [
   { key: 'mlb', label: 'MLB', available: true },
-  { key: 'nfl', label: 'NFL', available: false },
-  { key: 'nba', label: 'NBA', available: false },
-  { key: 'nhl', label: 'NHL', available: false },
+  { key: 'nfl', label: 'NFL', available: true },
+  { key: 'nba', label: 'NBA', available: true },
+  { key: 'nhl', label: 'NHL', available: true },
 ];
 
 export default function SportTabs() {

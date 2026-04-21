@@ -1,11 +1,16 @@
 const db = require('../db/index');
 const mlb = require('./mlb');
+const nfl = require('./nfl');
+const nba = require('./nba');
+const nhl = require('./nhl');
 
 const CACHE_TTL_MS = 15 * 60 * 1000; // 15 minutes
 
 const fetchers = {
   mlb: mlb.fetchStandings,
-  // nfl, nba, nhl will be added here as each sport is supported
+  nfl: nfl.fetchStandings,
+  nba: nba.fetchStandings,
+  nhl: nhl.fetchStandings,
 };
 
 /**
@@ -24,7 +29,7 @@ async function refreshIfStale(sport, seasonYear) {
   if (!isStale) return;
 
   const fetcher = fetchers[sport];
-  if (!fetcher) throw new Error(`No standings fetcher registered for sport: ${sport}`);
+  if (!fetcher) return;
 
   const records = await fetcher(seasonYear);
 

@@ -3,7 +3,7 @@ const router = express.Router();
 const { getStandings } = require('../services/standings');
 const db = require('../db/index');
 
-const SUPPORTED_SPORTS = ['mlb'];
+const SUPPORTED_SPORTS = ['mlb', 'nfl', 'nba', 'nhl'];
 const DEFAULT_SEASON = new Date().getFullYear();
 
 // GET /api/sports/:sport/standings?season=2026
