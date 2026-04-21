@@ -31,7 +31,7 @@ Supported leagues: **MLB** (live) · NFL, NBA, NHL (planned)
 - **MLB Data**: MLB Stats API (free, no key required)
 - **Auth**: Not yet implemented — no login required currently
 - **Containerization**: Docker (production-style; multi-stage frontend build)
-- **Hosting**: TBD
+- **Hosting**: Fly.io
 
 ## Running Locally (dev mode)
 
@@ -185,6 +185,34 @@ win_cache
 - Season year and sport are stored per pool — never hardcode them
 - Cache TTL is 15 minutes (`CACHE_TTL_MS` in `services/standings.js`) — adjust if needed for game-day freshness
 - All data persists in `backend/data/dubhub.sqlite` across server restarts; only the win cache goes stale (auto-refreshes on next request)
+
+## Hosting (Fly.io)
+
+- **Frontend**: `https://dub-hub-frontend.fly.dev`
+- **Backend**: `https://dub-hub-backend.fly.dev`
+- **Cost**: ~$3–5/month (shared CPU, 256MB frontend / 512MB backend, 1GB SQLite volume)
+- Frontend and backend communicate via Fly's private network (`dub-hub-backend.internal:3001`) — not through the public URL
+- SQLite data persists in a named Fly volume (`sqlite_data`) mounted at `/app/data`
+- Backend machine is always-on (`auto_stop_machines = false`, `min_machines_running = 1`) with a health check at `/api/health`
+
+### Deploying updates
+
+```bash
+# Backend
+cd backend && fly deploy
+
+# Frontend
+cd frontend && fly deploy
+```
+
+### Fly config files
+
+```
+backend/fly.toml    # backend app config, volume mount, health check
+frontend/fly.toml   # frontend app config
+frontend/nginx.conf          # Fly.io nginx config (proxies to dub-hub-backend.internal)
+frontend/nginx.local.conf    # Local Docker nginx config (proxies to backend:3001)
+```
 
 ## Out of Scope (for now)
 
